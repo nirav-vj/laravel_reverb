@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Events\MessageSent;
 use App\Events\MessagesSeen;
+use App\Events\ReactionUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Message;
+use App\Models\MessageReaction;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -141,8 +143,15 @@ class ChatController extends Controller
             
             // Categorize file types for specialized UI bubbles
             $mime = $file->getMimeType();
+            $extension = strtolower($file->getClientOriginalExtension());
             if (str_starts_with($mime, 'image/')) {
                 $attachmentType = 'image';
+            } elseif (
+                str_starts_with($mime, 'audio/') || 
+                in_array($extension, ['webm', 'mp3', 'wav', 'ogg', 'm4a', 'aac']) ||
+                str_starts_with($attachmentName, 'voice_note_')
+            ) {
+                $attachmentType = 'audio';
             } else {
                 $attachmentType = 'document';
             }
@@ -290,6 +299,64 @@ class ChatController extends Controller
         return response()->json([
             'success' => true,
             'users' => $users,
+        ]);
+    }
+
+    /**
+     * Toggle an emoji reaction on a message.
+     * If the same emoji is already set by this user → remove it (toggle off).
+     * If a different emoji is set → swap it.
+     */
+    public function toggleReaction(Request $request, Message $message)
+    {
+        $request->validate([
+            'reaction' => 'required|string|max:10',
+        ]);
+
+        $currentUser = Auth::user();
+
+        $existing = MessageReaction::where('message_id', $message->id)
+            ->where('user_id', $currentUser->id)
+            ->first();
+
+        if ($existing) {
+            if ($existing->reaction === $request->reaction) {
+                // Same emoji → remove reaction
+                $existing->delete();
+            } else {
+                // Different emoji → update reaction
+                $existing->update(['reaction' => $request->reaction]);
+            }
+        } else {
+            // No existing → create new reaction
+            MessageReaction::create([
+                'message_id' => $message->id,
+                'user_id'    => $currentUser->id,
+                'reaction'   => $request->reaction,
+            ]);
+        }
+
+        // Reload fresh reactions
+        $message->refresh()->load('reactions.user');
+
+        $reactionsPayload = $message->reactions->map(fn($r) => [
+            'id'        => $r->id,
+            'user_id'   => $r->user_id,
+            'user_name' => $r->user?->name ?? 'Unknown',
+            'reaction'  => $r->reaction,
+        ])->values()->all();
+
+        // Broadcast to the OTHER user in the conversation
+        $otherId = ($message->sender_id === $currentUser->id)
+            ? $message->receiver_id
+            : $message->sender_id;
+
+        broadcast(new ReactionUpdated($message, $currentUser->id))->toOthers();
+
+        return response()->json([
+            'success'    => true,
+            'message_id' => $message->id,
+            'reactions'  => $reactionsPayload,
         ]);
     }
 }

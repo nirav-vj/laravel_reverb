@@ -30,6 +30,7 @@ Route::middleware('auth')->group(function () {
     // Message Actions
     Route::post('/messages/{message}/pin', [ChatController::class, 'pinMessage'])->name('chat.pin');
     Route::delete('/messages/{message}', [ChatController::class, 'deleteMessage'])->name('chat.delete');
+    Route::post('/messages/{message}/react', [ChatController::class, 'toggleReaction'])->name('chat.react');
 
     // Profile Settings
     Route::post('/profile/update', [AuthController::class, 'updateProfile'])->name('profile.update');

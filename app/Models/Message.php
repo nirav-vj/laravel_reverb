@@ -31,7 +31,9 @@ class Message extends Model
         'deleted_by' => 'array',
     ];
 
-    protected $appends = ['attachment_url'];
+    protected $appends = ['attachment_url', 'reactions_data'];
+
+    protected $with = ['reactions.user'];
 
     /**
      * Get the sender of the message.
@@ -47,6 +49,27 @@ class Message extends Model
     public function receiver()
     {
         return $this->belongsTo(User::class, 'receiver_id');
+    }
+
+    /**
+     * Get the reactions on this message.
+     */
+    public function reactions()
+    {
+        return $this->hasMany(MessageReaction::class);
+    }
+
+    /**
+     * Appended: returns serialized reactions grouped for the frontend.
+     */
+    public function getReactionsDataAttribute(): array
+    {
+        return $this->reactions->map(fn($r) => [
+            'id'        => $r->id,
+            'user_id'   => $r->user_id,
+            'user_name' => $r->user?->name ?? 'Unknown',
+            'reaction'  => $r->reaction,
+        ])->values()->all();
     }
 
     /**

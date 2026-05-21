@@ -257,7 +257,7 @@
                                     <!-- Message Bubble -->
                                     <div :id="'msg-' + msg.id" class="flex w-full transition-colors duration-500 rounded-lg" :class="msg.sender_id === authUserId ? 'justify-end' : 'justify-start'">
                                         <div class="max-w-[75%] sm:max-w-[65%] rounded-2xl p-3 relative shadow-md group/bubble"
-                                             x-data="{ menuOpen: false }"
+                                             x-data="{ menuOpen: false, emojiPickerOpen: false }"
                                              :class="msg.sender_id === authUserId 
                                                 ? 'bg-gradient-to-br from-teal-600 to-teal-700 text-slate-100 rounded-tr-none' 
                                                 : 'bg-slate-900/80 border border-slate-800 text-slate-200 rounded-tl-none'">
@@ -273,10 +273,100 @@
                                                 </div>
                                             </template>
 
-                                            <!-- 3-Dot Options Menu -->
-                                            <div class="absolute top-2 opacity-0 group-hover/bubble:opacity-100 transition-opacity duration-200 z-20"
-                                                 :class="msg.sender_id === authUserId ? '-left-10' : '-right-10'">
-                                                
+                                            <!-- Actions Row: Emoji Picker + 3-Dot Menu -->
+                                            <div class="absolute top-2 opacity-0 group-hover/bubble:opacity-100 transition-opacity duration-200 z-20 flex items-center gap-1"
+                                                 :class="msg.sender_id === authUserId ? '-left-20' : '-right-20'">
+
+                                                <!-- Emoji Reaction Trigger -->
+                                                <div class="relative"
+                                                     x-data="{
+                                                         fullPickerOpen: false,
+                                                         emojiCategory: 0,
+                                                         emojiSearch: '',
+                                                         allCategories: [
+                                                             { label: '😊', name: 'Smileys', emojis: ['😀','😁','😂','🤣','😃','😄','😅','😆','😇','😉','😊','😋','😍','🥰','😘','😗','😙','😚','🙂','🤗','🤩','🤔','🤨','😐','😑','😶','🙄','😏','😒','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🥵','🥶','🥴','😵','🤯','🤠','🥳','😎','🤓','🧐','😕','😟','🙁','☹️','😮','😯','😲','😳','🥺','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿'] },
+                                                             { label: '👋', name: 'Gestures', emojis: ['👋','🤚','🖐','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','🫶','👐','🤲','🙏','✍️','💅','🤳','💪','🦵','🦶','👂','🦻','👃','🫀','🫁','🧠','🦷','🦴','👀','👁','👅','👄'] },
+                                                             { label: '❤️', name: 'Hearts', emojis: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❤️‍🔥','❤️‍🩹','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☪️','🕉','✡️','🔯','🛐','⛎','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'] },
+                                                             { label: '⚽', name: 'Activities', emojis: ['⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱','🏓','🏸','🏒','🥊','🥋','🎽','⛷','🏂','🏋️','🤼','🤸','⛹️','🤺','🏇','🧘','🏄','🏊','🤽','🚣','🧗','🚵','🚴','🏆','🥇','🥈','🥉','🏅','🎖','🎗','🎪','🎭','🎨','🎬','🎤','🎧','🎵','🎶','🎷','🎸','🎹','🎺','🎻','🥁','🎮','🎲'] },
+                                                             { label: '🐶', name: 'Animals', emojis: ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🐔','🐧','🐦','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🐛','🦋','🐌','🐞','🐜','🦟','🦂','🐢','🐍','🦎','🦖','🦕','🐙','🦑','🦐','🦞','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🐊','🐅','🐆','🦓','🦍','🐘','🦛','🦏','🐪','🦒','🦘','🐃','🐄'] },
+                                                             { label: '🍎', name: 'Food', emojis: ['🍎','🍊','🍋','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🥑','🍆','🥔','🥕','🌽','🌶','🫑','🥦','🧄','🧅','🍄','🥜','🌰','🍞','🥐','🥖','🥨','🧀','🥚','🍳','🧈','🥞','🧇','🥓','🌮','🌯','🥙','🧆','🥚','🍣','🍤','🍜','🍝','🍛','🍲','🍱','🍚','🍙','🍘','🍥','🥮','🧁','🎂','🍰','🍮','🍭','🍬','🍫','🍿','🍩','🍪','🌰','☕','🍵','🧋','🥤','🍺','🍻','🥂','🍷','🥃','🍸','🍹','🧃'] },
+                                                             { label: '💡', name: 'Objects', emojis: ['💡','🔦','🕯','🪔','📱','💻','🖥','⌨️','🖨','🖱','🖲','💾','💿','📀','📷','📸','📹','🎥','📽','🎞','📞','☎️','📟','📠','📺','📻','🎙','🎚','🎛','⏱','⏲','⏰','🕰','⌚','📡','🔋','🔌','💰','💴','💵','💸','💳','🪙','📈','📉','📊','📦','📧','📨','📩','📪','📫','📬','📭','📮','🗳','✏️','📝','📁','📂','📅','📆','🗓','📇','📋','📌','📍','🗺','🔍','🔎','🔏','🔐','🔑','🗝','🔨','⛏','🪓','🔧','🪛','🔩','⚙️','🗜','🪝','🧲','🪜','⚖️','🪣','🪤','🧰','🔬','🔭','💊','💉','🩺','🩸','🪤','🧸','🎁','🎀','🎊','🎉','🎈'] },
+                                                             { label: '🔣', name: 'Symbols', emojis: ['✅','❌','❎','🆗','🆙','🆒','🆕','🆓','0️⃣','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟','💯','🔢','🔡','🔠','▶️','⏩','⏭','⏯','◀️','⏪','⏮','🔼','⏫','🔽','⏬','⏸','⏹','⏺','🎦','🔅','🔆','📶','📳','📴','📵','📲','🔇','🔕','🔉','🔊','📣','📢','🔔','🔕','💬','💭','🗯','♻️','🚮','🚰','♿','🚹','🚺','🚻','🅿️','🈳','🈹','🈲','🆘','🆔','🔞','⛔','🚫','🔇','🔕','🔛','🔜','🔝'] }
+                                                         ],
+                                                         get filteredEmojis() {
+                                                             const cat = this.allCategories[this.emojiCategory];
+                                                             if (!this.emojiSearch.trim()) return cat ? cat.emojis : [];
+                                                             const q = this.emojiSearch.trim().toLowerCase();
+                                                             return this.allCategories.flatMap(c => c.emojis).filter(e => e.includes(q));
+                                                         }
+                                                     }">
+                                                    <button @click.stop="emojiPickerOpen = !emojiPickerOpen; fullPickerOpen = false"
+                                                            class="p-1 rounded-full bg-slate-900/80 border border-slate-800 text-slate-400 hover:text-yellow-400 shadow-lg backdrop-blur-sm transition text-sm leading-none"
+                                                            title="React">
+                                                        😊
+                                                    </button>
+
+                                                    <!-- Quick 6 + Full Picker Toggle -->
+                                                    <div x-show="emojiPickerOpen" x-transition.opacity.duration.150ms style="display:none;"
+                                                         @click.away="emojiPickerOpen = false; fullPickerOpen = false"
+                                                         class="absolute z-50 bottom-9 bg-slate-900/98 border border-slate-700 rounded-2xl shadow-2xl backdrop-blur-md"
+                                                         :class="msg.sender_id === authUserId ? 'right-0' : 'left-0'">
+
+                                                        <!-- Quick row: 6 emojis + + button -->
+                                                        <div class="flex items-center gap-0.5 px-2 py-1.5">
+                                                            <template x-for="emoji in ['👍','❤️','😂','😮','😢','🙏']" :key="emoji">
+                                                                <button @click.stop="sendReaction(msg.id, emoji); emojiPickerOpen = false; fullPickerOpen = false"
+                                                                        class="text-xl hover:scale-125 transition-transform duration-100 px-1 py-0.5 rounded-xl hover:bg-slate-800 active:scale-110"
+                                                                        x-text="emoji">
+                                                                </button>
+                                                            </template>
+                                                            <!-- Plus button -->
+                                                            <button @click.stop="fullPickerOpen = !fullPickerOpen; emojiSearch = ''"
+                                                                    class="w-7 h-7 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 hover:text-white flex items-center justify-center ml-1 transition font-bold text-sm">
+                                                                +
+                                                            </button>
+                                                        </div>
+
+                                                        <!-- Full Picker Panel -->
+                                                        <div x-show="fullPickerOpen" x-transition.opacity.duration.100ms style="display:none;"
+                                                             class="border-t border-slate-800 w-72">
+                                                            <!-- Search bar -->
+                                                            <div class="px-2 pt-2 pb-1">
+                                                                <input x-model="emojiSearch" type="text" placeholder="Search emoji..."
+                                                                       class="w-full px-3 py-1.5 text-xs bg-slate-950 border border-slate-700 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-teal-500/60 transition">
+                                                            </div>
+
+                                                            <!-- Category tabs -->
+                                                            <template x-if="!emojiSearch.trim()">
+                                                                <div class="flex gap-0.5 px-2 pb-1 overflow-x-auto scrollbar-hide">
+                                                                    <template x-for="(cat, idx) in allCategories" :key="idx">
+                                                                        <button @click.stop="emojiCategory = idx"
+                                                                                class="flex-shrink-0 px-2 py-1 rounded-lg text-base transition-all"
+                                                                                :class="emojiCategory === idx ? 'bg-teal-500/20 scale-110' : 'hover:bg-slate-800'"
+                                                                                x-text="cat.label">
+                                                                        </button>
+                                                                    </template>
+                                                                </div>
+                                                            </template>
+
+                                                            <!-- Emoji grid -->
+                                                            <div class="grid grid-cols-8 gap-0 px-2 pb-2 max-h-44 overflow-y-auto">
+                                                                <template x-for="emoji in filteredEmojis" :key="emoji">
+                                                                    <button @click.stop="sendReaction(msg.id, emoji); emojiPickerOpen = false; fullPickerOpen = false"
+                                                                            class="text-xl p-1 rounded-lg hover:bg-slate-800 hover:scale-125 transition-all duration-75 active:scale-110"
+                                                                            x-text="emoji">
+                                                                    </button>
+                                                                </template>
+                                                                <template x-if="filteredEmojis.length === 0">
+                                                                    <div class="col-span-8 text-center text-slate-500 text-xs py-4">No emoji found</div>
+                                                                </template>
+                                                            </div>
+                                                        </div>
+
+                                                    </div>
+                                                </div>
+
+                                                <!-- 3-Dot Options -->
                                                 <button @click.stop="menuOpen = !menuOpen" @click.away="menuOpen = false"
                                                         class="p-1 rounded-full bg-slate-900/80 border border-slate-800 text-slate-400 hover:text-white shadow-lg backdrop-blur-sm transition">
                                                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -309,7 +399,7 @@
                                             <template x-if="msg.attachment_path">
                                                 <div class="mb-2 rounded-lg overflow-hidden border border-black/10">
                                                     <!-- Image -->
-                                                    <template x-if="msg.attachment_type === 'image'">
+                                                    <template x-if="isImageAttachment(msg)">
                                                         <a :href="msg.attachment_url" target="_blank" class="block cursor-zoom-in group/img relative">
                                                             <img :src="msg.attachment_url" class="w-full max-h-60 object-cover hover:scale-[1.02] transition-transform duration-200">
                                                             <div class="absolute inset-0 bg-black/30 opacity-0 group-hover/img:opacity-100 flex items-center justify-center transition-opacity duration-150">
@@ -319,8 +409,131 @@
                                                             </div>
                                                         </a>
                                                     </template>
+                                                    <!-- Audio/Voice Note Player -->
+                                                    <template x-if="isAudioAttachment(msg)">
+                                                        <div class="p-3 rounded-lg bg-black/20 hover:bg-black/30 transition-colors duration-150 flex flex-col gap-2 min-w-[240px]"
+                                                             x-data="{
+                                                                 audio: null,
+                                                                 isPlaying: false,
+                                                                 currentTime: 0,
+                                                                 duration: 0,
+                                                                 playbackSpeed: 1,
+                                                                 initAudio(url) {
+                                                                     if (!this.audio) {
+                                                                         const a = new Audio();
+                                                                         a.addEventListener('timeupdate', () => {
+                                                                             this.currentTime = a.currentTime;
+                                                                             if (this.duration === Infinity || !this.duration || this.duration === 0) {
+                                                                                 if (a.duration && a.duration !== Infinity) {
+                                                                                     this.duration = a.duration;
+                                                                                 } else if (a.buffered && a.buffered.length > 0) {
+                                                                                     this.duration = a.buffered.end(0);
+                                                                                 }
+                                                                             }
+                                                                         });
+                                                                         const setDur = () => {
+                                                                             if (a.duration && a.duration !== Infinity) {
+                                                                                 this.duration = a.duration;
+                                                                             } else if (a.buffered && a.buffered.length > 0) {
+                                                                                 this.duration = a.buffered.end(0);
+                                                                             }
+                                                                         };
+                                                                         a.addEventListener('loadedmetadata', setDur);
+                                                                         a.addEventListener('durationchange', setDur);
+                                                                         a.addEventListener('progress', setDur);
+                                                                         a.addEventListener('ended', () => {
+                                                                             this.isPlaying = false;
+                                                                             this.currentTime = 0;
+                                                                         });
+                                                                         a.src = url;
+                                                                         this.audio = a;
+                                                                     }
+                                                                 },
+                                                                 togglePlay(url) {
+                                                                     this.initAudio(url);
+                                                                     if (this.isPlaying) {
+                                                                         this.audio.pause();
+                                                                         this.isPlaying = false;
+                                                                     } else {
+                                                                         this.audio.play().catch(e => console.error('Audio play failed:', e));
+                                                                         this.isPlaying = true;
+                                                                     }
+                                                                 },
+                                                                 cycleSpeed() {
+                                                                     if (this.audio) {
+                                                                         if (this.playbackSpeed === 1) {
+                                                                             this.playbackSpeed = 1.5;
+                                                                         } else if (this.playbackSpeed === 1.5) {
+                                                                             this.playbackSpeed = 2;
+                                                                         } else {
+                                                                             this.playbackSpeed = 1;
+                                                                         }
+                                                                         this.audio.playbackRate = this.playbackSpeed;
+                                                                     }
+                                                                 },
+                                                                 formatTime(seconds) {
+                                                                     if (isNaN(seconds) || seconds === Infinity || !seconds) return '0:00';
+                                                                     const m = Math.floor(seconds / 60);
+                                                                     const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+                                                                     return `${m}:${s}`;
+                                                                 },
+                                                                 seek(e, url) {
+                                                                     this.initAudio(url);
+                                                                     if (this.audio) {
+                                                                         const rect = e.currentTarget.getBoundingClientRect();
+                                                                         const clickX = e.clientX - rect.left;
+                                                                         const percentage = clickX / rect.width;
+                                                                         if (this.duration && this.duration !== Infinity) {
+                                                                             this.audio.currentTime = percentage * this.duration;
+                                                                         }
+                                                                     }
+                                                                 },
+                                                                 getProgressPercent() {
+                                                                     if (this.duration > 0) {
+                                                                         const pct = (this.currentTime / this.duration) * 100;
+                                                                         return Math.min(100, Math.max(0, pct));
+                                                                     }
+                                                                     return 0;
+                                                                 }
+                                                             }">
+                                                            
+                                                            <div class="flex items-center gap-3">
+                                                                <!-- Play/Pause Button -->
+                                                                <button @click="togglePlay(msg.attachment_url)" class="p-2.5 rounded-full bg-teal-500 hover:bg-teal-400 text-slate-950 flex items-center justify-center shrink-0 shadow transition transform active:scale-95">
+                                                                    <!-- Play Icon -->
+                                                                    <svg x-show="!isPlaying" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                                                        <path d="M8 5v14l11-7z"></path>
+                                                                    </svg>
+                                                                    <!-- Pause Icon -->
+                                                                    <svg x-show="isPlaying" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" style="display:none;">
+                                                                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"></path>
+                                                                    </svg>
+                                                                </button>
+                                                                
+                                                                <!-- Progress Slider -->
+                                                                <div class="flex-1 flex flex-col gap-1">
+                                                                    <div class="w-full bg-slate-800/80 rounded-full h-1.5 cursor-pointer relative group/timeline" @click="seek($event, msg.attachment_url)">
+                                                                        <div class="bg-teal-400 h-full rounded-full transition-all duration-75"
+                                                                             :style="'width: ' + getProgressPercent() + '%'"></div>
+                                                                        <div class="absolute w-2.5 h-2.5 bg-teal-300 rounded-full top-1/2 -translate-y-1/2 opacity-0 group-hover/timeline:opacity-100 transition-opacity"
+                                                                             :style="'left: ' + getProgressPercent() + '%'"></div>
+                                                                    </div>
+                                                                    <div class="flex items-center justify-between text-[9px] text-slate-400 font-semibold tracking-wider">
+                                                                        <span x-text="formatTime(currentTime)"></span>
+                                                                        <span x-text="formatTime(duration)"></span>
+                                                                    </div>
+                                                                </div>
+                                                                
+                                                                <!-- Playback Speed Control -->
+                                                                <button @click="cycleSpeed()" class="text-[10px] font-bold px-2 py-1 bg-slate-950/80 hover:bg-slate-900 border border-slate-800 rounded-md text-teal-400 transition hover:text-teal-300 shrink-0 select-none shadow">
+                                                                    <span x-text="playbackSpeed + 'x'"></span>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </template>
+                                                    
                                                     <!-- File/Document -->
-                                                    <template x-if="msg.attachment_type !== 'image'">
+                                                    <template x-if="!isImageAttachment(msg) && !isAudioAttachment(msg)">
                                                         <a :href="msg.attachment_url" download 
                                                            class="flex items-center gap-3 p-3 rounded-lg bg-black/20 hover:bg-black/30 transition-colors duration-150">
                                                             <div class="p-2.5 rounded-xl bg-slate-950/80 text-teal-400">
@@ -377,6 +590,24 @@
                                                     </template>
                                                 </div>
                                             </div>
+
+                                            <!-- Reaction Pills -->
+                                            <template x-if="msg.reactions_data && msg.reactions_data.length > 0">
+                                                <div class="flex flex-wrap gap-1 mt-2 -mb-1">
+                                                    <template x-for="group in getReactionGroups(msg.reactions_data)" :key="group.emoji">
+                                                        <button @click="sendReaction(msg.id, group.emoji)"
+                                                                :title="group.names.join(', ')"
+                                                                class="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold transition-all duration-150 hover:scale-105 active:scale-95 select-none"
+                                                                :class="group.reacted 
+                                                                    ? 'bg-teal-500/30 border border-teal-400/60 text-teal-200' 
+                                                                    : 'bg-slate-800/80 border border-slate-700 text-slate-300 hover:border-teal-500/50'">
+                                                            <span x-text="group.emoji"></span>
+                                                            <span x-text="group.count" class="text-[10px]"></span>
+                                                        </button>
+                                                    </template>
+                                                </div>
+                                            </template>
+
                                         </div>
                                     </div>
 
@@ -417,7 +648,7 @@
                     <!-- Chat Input Panel -->
                     <div class="p-3 bg-slate-900/60 border-t border-slate-800/80 flex items-center gap-2 flex-shrink-0 relative">
                         <!-- Paperclip Attachment Trigger -->
-                        <div>
+                        <div x-show="!isRecordingAudio">
                             <button @click="$refs.attachmentInput.click()" 
                                     class="p-2.5 rounded-xl text-slate-400 hover:text-teal-400 hover:bg-slate-800 transition duration-150"
                                     title="Add Attachment">
@@ -428,8 +659,39 @@
                             <input type="file" x-ref="attachmentInput" class="hidden" @change="handleFileChange">
                         </div>
 
+                        <!-- Microphone Icon -->
+                        <div x-show="!isRecordingAudio">
+                            <button @click="startAudioRecording()" 
+                                    class="p-2.5 rounded-xl text-slate-400 hover:text-teal-400 hover:bg-slate-800 transition duration-150"
+                                    title="Record Voice Note">
+                                <svg class="w-5.5 h-5.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- Glowing Recording Indicator -->
+                        <div x-show="isRecordingAudio" style="display: none;" class="flex-1 flex items-center justify-between bg-slate-950/80 border border-rose-500/20 px-4 py-2.5 rounded-2xl">
+                            <div class="flex items-center gap-2">
+                                <span class="flex h-2.5 w-2.5 relative">
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
+                                </span>
+                                <span class="text-xs text-rose-400 font-bold uppercase tracking-wider animate-pulse">Recording Voice Note</span>
+                                <span class="text-xs text-slate-300 font-bold ml-2 border-l border-slate-800 pl-3" x-text="formatAudioTimer(audioDuration)">0:00</span>
+                            </div>
+                            
+                            <button @click="cancelAudioRecording()" 
+                                    class="p-1.5 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition"
+                                    title="Cancel & Discard">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                            </button>
+                        </div>
+
                         <!-- Typing input field -->
-                        <div class="flex-1">
+                        <div class="flex-1" x-show="!isRecordingAudio">
                             <input type="text" x-model="newMessageText" 
                                    @keydown="handleKeyDown" 
                                    @input="notifyTyping"
@@ -439,11 +701,21 @@
 
                         <!-- Send Button -->
                         <div>
-                            <button @click="sendCurrentMessage()" 
-                                    class="p-3 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-slate-950 shadow-lg shadow-teal-500/10 transition duration-150 transform hover:scale-105 active:scale-95 flex items-center justify-center">
-                                <svg class="w-5 h-5 text-slate-950 transform rotate-45 -translate-x-0.5 translate-y-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
-                                </svg>
+                            <button @click="isRecordingAudio ? stopAndSendAudioRecording() : sendCurrentMessage()" 
+                                    class="p-3 rounded-2xl bg-gradient-to-r transition duration-150 transform hover:scale-105 active:scale-95 flex items-center justify-center"
+                                    :class="isRecordingAudio 
+                                        ? 'from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 text-white shadow-lg shadow-rose-500/10' 
+                                        : 'from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-slate-950 shadow-lg shadow-teal-500/10'">
+                                <template x-if="isRecordingAudio">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </template>
+                                <template x-if="!isRecordingAudio">
+                                    <svg class="w-5 h-5 text-slate-950 transform rotate-45 -translate-x-0.5 translate-y-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                                    </svg>
+                                </template>
                             </button>
                         </div>
                     </div>
@@ -605,7 +877,7 @@
                             <!-- Attachment preview if present -->
                             <template x-if="msg.attachment_path">
                                 <div class="mb-1 text-[11px] text-teal-400/80 flex items-center gap-1 font-semibold">
-                                    <span x-text="msg.attachment_type === 'image' ? '📷 Image' : '📁 Document'"></span>
+                                    <span x-text="isImageAttachment(msg) ? '📷 Image' : (isAudioAttachment(msg) ? '🎤 Voice Note' : '📁 Document')"></span>
                                     <span class="text-slate-500 font-normal truncate max-w-[150px]" x-text="'(' + msg.attachment_name + ')'"></span>
                                 </div>
                             </template>
@@ -671,6 +943,13 @@
             attachmentName: '',
             attachmentProgress: 0,
             isUploading: false,
+            
+            // Voice Notes
+            isRecordingAudio: false,
+            audioRecorder: null,
+            audioChunks: [],
+            audioDuration: 0,
+            audioTimerInterval: null,
             
             // Delete Modal State
             deleteModalOpen: false,
@@ -1112,10 +1391,35 @@
                 return current !== previous;
             },
 
+            isAudioAttachment(msg) {
+                if (!msg.attachment_path) return false;
+                if (msg.attachment_type === 'audio') return true;
+                const path = (msg.attachment_path || '').toLowerCase();
+                const name = (msg.attachment_name || '').toLowerCase();
+                return path.endsWith('.webm') || 
+                       path.endsWith('.mp3') || 
+                       path.endsWith('.wav') || 
+                       path.endsWith('.m4a') || 
+                       name.includes('voice_note');
+            },
+
+            isImageAttachment(msg) {
+                if (!msg.attachment_path) return false;
+                if (msg.attachment_type === 'image') return true;
+                const path = (msg.attachment_path || '').toLowerCase();
+                return path.endsWith('.jpg') || 
+                       path.endsWith('.jpeg') || 
+                       path.endsWith('.png') || 
+                       path.endsWith('.gif') || 
+                       path.endsWith('.webp');
+            },
+
             formatSnippet(msg) {
                 if (!msg) return 'No messages yet';
                 if (msg.attachment_path) {
-                    return msg.attachment_type === 'image' ? '📷 Image' : '📁 Document';
+                    if (this.isImageAttachment(msg)) return '📷 Image';
+                    if (this.isAudioAttachment(msg)) return '🎤 Voice Note';
+                    return '📁 Document';
                 }
                 return msg.message || '';
             },
@@ -1175,6 +1479,158 @@
                     console.error("Error saving profile:", err);
                     alert('An error occurred. Make sure the image is valid and under 2MB.');
                 });
+            },
+
+            startAudioRecording() {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    alert('Audio recording is not supported in this browser.');
+                    return;
+                }
+
+                navigator.mediaDevices.getUserMedia({ audio: true })
+                    .then(stream => {
+                        this.audioChunks = [];
+                        this.audioDuration = 0;
+                        this.isRecordingAudio = true;
+                        
+                        this.audioRecorder = new MediaRecorder(stream);
+                        this.audioRecorder.addEventListener('dataavailable', e => {
+                            if (e.data.size > 0) {
+                                this.audioChunks.push(e.data);
+                            }
+                        });
+
+                        this.audioRecorder.start(100);
+
+                        this.audioTimerInterval = setInterval(() => {
+                            this.audioDuration++;
+                        }, 1000);
+                    })
+                    .catch(err => {
+                        console.error('Error starting audio recording:', err);
+                        alert('Could not access microphone. Please grant microphone permissions.');
+                    });
+            },
+
+            cancelAudioRecording() {
+                if (this.audioRecorder && this.audioRecorder.state !== 'inactive') {
+                    this.audioRecorder.stop();
+                    this.audioRecorder.stream.getTracks().forEach(track => track.stop());
+                }
+                
+                clearInterval(this.audioTimerInterval);
+                this.isRecordingAudio = false;
+                this.audioChunks = [];
+                this.audioDuration = 0;
+            },
+
+            stopAndSendAudioRecording() {
+                if (!this.audioRecorder || this.audioRecorder.state === 'inactive') return;
+
+                this.audioRecorder.addEventListener('stop', () => {
+                    const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+                    this.sendVoiceNoteBlob(audioBlob);
+                }, { once: true });
+
+                this.audioRecorder.stop();
+                this.audioRecorder.stream.getTracks().forEach(track => track.stop());
+                
+                clearInterval(this.audioTimerInterval);
+                this.isRecordingAudio = false;
+            },
+
+            sendVoiceNoteBlob(blob) {
+                const contactId = this.activeContact.id;
+                const formData = new FormData();
+                
+                const filename = 'voice_note_' + Date.now() + '.webm';
+                formData.append('attachment', blob, filename);
+                formData.append('message', '');
+
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                this.isUploading = true;
+                this.attachmentProgress = 10;
+
+                window.axios.post(`/messages/${contactId}`, formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                        'X-CSRF-TOKEN': csrfToken
+                    },
+                    onUploadProgress: (progressEvent) => {
+                        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                        this.attachmentProgress = percentCompleted;
+                    }
+                })
+                .then(response => {
+                    this.isUploading = false;
+                    if (response.data.success) {
+                        const newMsg = response.data.message;
+                        this.messages.push(newMsg);
+                        this.updateContactLastMessage(contactId, newMsg);
+                        this.scrollToBottom();
+                    }
+                })
+                .catch(err => {
+                    console.error("Error uploading voice note:", err);
+                    alert("Failed to upload voice note.");
+                    this.isUploading = false;
+                });
+            },
+
+            formatAudioTimer(seconds) {
+                const m = Math.floor(seconds / 60);
+                const s = (seconds % 60).toString().padStart(2, '0');
+                return `${m}:${s}`;
+            },
+
+            // ================== EMOJI REACTIONS ==================
+
+            sendReaction(messageId, emoji) {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                fetch(`/messages/${messageId}/react`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({ reaction: emoji }),
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        // Patch the local message reactions immediately
+                        const msg = this.messages.find(m => m.id === data.message_id);
+                        if (msg) {
+                            msg.reactions_data = data.reactions;
+                        }
+                    }
+                })
+                .catch(err => console.error('Reaction error:', err));
+            },
+
+            /**
+             * Groups raw reactions array into deduplicated emoji → {emoji, count, reacted, names}
+             */
+            getReactionGroups(reactionsData) {
+                if (!reactionsData || !reactionsData.length) return [];
+                const groups = {};
+                reactionsData.forEach(r => {
+                    if (!groups[r.reaction]) {
+                        groups[r.reaction] = {
+                            emoji: r.reaction,
+                            count: 0,
+                            reacted: false,
+                            names: [],
+                        };
+                    }
+                    groups[r.reaction].count++;
+                    groups[r.reaction].names.push(r.user_name);
+                    if (r.user_id === this.authUserId) {
+                        groups[r.reaction].reacted = true;
+                    }
+                });
+                return Object.values(groups);
             }
         };
     }
