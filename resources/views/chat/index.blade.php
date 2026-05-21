@@ -20,11 +20,19 @@
             
             <!-- Sidebar Header -->
             <div class="h-16 px-4 flex items-center justify-between border-b border-slate-800/80 bg-slate-900/40">
-                <div class="flex items-center gap-3">
-                    <img :src="authUserAvatar" class="w-10 h-10 rounded-full border-2 border-teal-500/30 object-cover">
+                <div @click="openProfileModal()" class="flex items-center gap-3 cursor-pointer group">
+                    <div class="relative">
+                        <img :src="authUserAvatar" class="w-10 h-10 rounded-full border-2 border-teal-500/30 object-cover group-hover:border-teal-400/60 transition duration-150">
+                        <div class="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition duration-150">
+                            <!-- Edit icon overlay -->
+                            <svg class="w-4 h-4 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                            </svg>
+                        </div>
+                    </div>
                     <div>
-                        <h3 class="font-semibold text-sm leading-none" x-text="authUserName"></h3>
-                        <span class="text-[10px] text-teal-400 font-medium tracking-wide uppercase">My Profile</span>
+                        <h3 class="font-semibold text-sm leading-none group-hover:text-teal-400 transition duration-150" x-text="authUserName"></h3>
+                        <span class="text-[10px] text-teal-400/80 group-hover:text-teal-400 font-medium tracking-wide uppercase transition duration-150">Edit Profile</span>
                     </div>
                 </div>
                 
@@ -444,6 +452,71 @@
             </div>
         </div>
     </div>
+
+    <!-- Profile Edit Modal -->
+    <div x-show="profileModalOpen" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" @click="profileModalOpen = false" x-transition.opacity></div>
+        
+        <!-- Modal Content -->
+        <div class="relative bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm m-4 transform transition-all"
+             x-transition:enter="ease-out duration-300"
+             x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+             x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+             x-transition:leave="ease-in duration-200"
+             x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+             x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95">
+             
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-slate-200">Edit Profile</h3>
+                <button @click="profileModalOpen = false" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <form @submit.prevent="saveProfile()" class="space-y-4">
+                <!-- Avatar Upload with Preview -->
+                <div class="flex flex-col items-center gap-3">
+                    <div class="relative group/avatar cursor-pointer" @click="$refs.profileAvatarInput.click()">
+                        <img :src="profileAvatarPreview || authUserAvatar" class="w-24 h-24 rounded-full object-cover border-2 border-teal-500/50 shadow-md">
+                        <div class="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center transition-opacity duration-150">
+                            <span class="text-[10px] text-white font-medium uppercase">Change</span>
+                        </div>
+                    </div>
+                    <input type="file" x-ref="profileAvatarInput" class="hidden" accept="image/*" @change="handleProfileAvatarChange">
+                    <span class="text-[10px] text-slate-500">Click to upload a new profile photo (max 2MB)</span>
+                </div>
+
+                <!-- Display Name Field -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1.5 uppercase">Display Name</label>
+                    <input type="text" x-model="profileName" 
+                           class="block w-full px-3 py-2 bg-slate-950/80 border border-slate-800/80 rounded-xl text-sm text-white focus:outline-none focus:ring-1 focus:ring-teal-500/50 focus:border-teal-500/50 transition duration-150">
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex gap-2 pt-2">
+                    <button type="button" @click="profileModalOpen = false" 
+                            class="flex-1 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition transform active:scale-95">
+                        Cancel
+                    </button>
+                    <button type="submit" :disabled="isSavingProfile"
+                            class="flex-1 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-slate-950 text-xs font-bold shadow-lg shadow-teal-500/10 transition transform active:scale-95 disabled:opacity-50 disabled:pointer-events-none">
+                        <span x-show="!isSavingProfile">Save Changes</span>
+                        <span x-show="isSavingProfile" class="flex items-center justify-center gap-1">
+                            <svg class="animate-spin h-4 w-4 text-slate-950" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Saving...
+                        </span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -470,6 +543,13 @@
             // Delete Modal State
             deleteModalOpen: false,
             messageToDelete: null,
+
+            // Profile Modal State
+            profileModalOpen: false,
+            profileName: '',
+            profileAvatarFile: null,
+            profileAvatarPreview: null,
+            isSavingProfile: false,
             
             // Heartbeat Typing
             typingTimeout: null,
@@ -900,6 +980,63 @@
                     return msg.attachment_type === 'image' ? '📷 Image' : '📁 Document';
                 }
                 return msg.message || '';
+            },
+
+            openProfileModal() {
+                this.profileName = this.authUserName;
+                this.profileAvatarFile = null;
+                this.profileAvatarPreview = null;
+                this.profileModalOpen = true;
+            },
+
+            handleProfileAvatarChange(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                this.profileAvatarFile = file;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.profileAvatarPreview = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            },
+
+            saveProfile() {
+                if (!this.profileName.trim()) return;
+                
+                this.isSavingProfile = true;
+                const formData = new FormData();
+                formData.append('name', this.profileName);
+                if (this.profileAvatarFile) {
+                    formData.append('avatar', this.profileAvatarFile);
+                }
+                
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                
+                fetch('/profile/update', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken
+                    },
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    this.isSavingProfile = false;
+                    if (data.success) {
+                        // Update state locally
+                        this.authUserName = data.name;
+                        this.authUserAvatar = data.avatar_url;
+                        this.profileModalOpen = false;
+                    } else {
+                        alert(data.error || 'Failed to update profile.');
+                    }
+                })
+                .catch(err => {
+                    this.isSavingProfile = false;
+                    console.error("Error saving profile:", err);
+                    alert('An error occurred. Make sure the image is valid and under 2MB.');
+                });
             }
         };
     }
