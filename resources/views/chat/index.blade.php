@@ -85,9 +85,9 @@
                                 <span class="text-[10px] text-slate-500 flex-shrink-0" x-text="formatTime(user.last_message ? user.last_message.created_at : null)"></span>
                             </div>
                             
-                            <div class="flex items-center justify-between mt-1">
+                            <div class="flex items-center justify-between mt-1 gap-2">
                                 <!-- Last message or Typing state indicator -->
-                                <div class="text-xs truncate max-w-[80%]" :class="user.typing ? 'text-teal-400 italic' : 'text-slate-400'">
+                                <div class="text-xs truncate flex-1" :class="user.typing ? 'text-teal-400 italic' : 'text-slate-400'">
                                     <template x-if="user.typing">
                                         <span class="flex items-center gap-1">
                                             <span class="flex h-1.5 w-1.5 relative">
@@ -98,15 +98,48 @@
                                         </span>
                                     </template>
                                     <template x-if="!user.typing">
-                                        <span x-text="formatSnippet(user.last_message)"></span>
+                                        <span class="truncate block" x-text="formatSnippet(user.last_message)"></span>
                                     </template>
                                 </div>
                                 
-                                <!-- Unread messages count badge -->
-                                <span x-show="user.unread_count > 0" 
-                                      x-text="user.unread_count" 
-                                      class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-gradient-to-r from-teal-500 to-emerald-500 text-[10px] font-bold text-slate-950 min-w-[18px] animate-pulse">
-                                </span>
+                                <!-- Right-side Status: Unread count OR Ticks below the time -->
+                                <div class="flex items-center justify-end flex-shrink-0 min-w-[20px]">
+                                    <!-- Unread messages count badge -->
+                                    <span x-show="user.unread_count > 0" 
+                                          x-text="user.unread_count" 
+                                          class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-gradient-to-r from-teal-500 to-emerald-500 text-[10px] font-bold text-slate-950 min-w-[18px] animate-pulse">
+                                    </span>
+                                    
+                                    <!-- Status ticks (Only if no unread count and I sent the last message) -->
+                                    <template x-if="user.unread_count === 0 && user.last_message && user.last_message.sender_id === authUserId">
+                                        <span class="flex items-center">
+                                            <template x-if="user.last_message.is_seen">
+                                                <!-- Read: Double Blue Ticks -->
+                                                <svg class="w-4 h-4 text-[#53bdeb]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                                    <polyline points="22 10 13.5 18.5 11 16" class="opacity-80"></polyline>
+                                                </svg>
+                                            </template>
+                                            <template x-if="!user.last_message.is_seen">
+                                                <span class="flex items-center">
+                                                    <template x-if="user.is_online">
+                                                        <!-- Delivered/Online: Double Grey Ticks -->
+                                                        <svg class="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                                            <polyline points="22 10 13.5 18.5 11 16" class="opacity-80"></polyline>
+                                                        </svg>
+                                                    </template>
+                                                    <template x-if="!user.is_online">
+                                                        <!-- Sent/Offline: Single Grey Tick -->
+                                                        <svg class="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                                        </svg>
+                                                    </template>
+                                                </span>
+                                            </template>
+                                        </span>
+                                    </template>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -321,11 +354,21 @@
                                                                 </svg>
                                                             </template>
                                                             <template x-if="!msg.is_seen">
-                                                                <!-- Sent but not read: Grey Ticks -->
-                                                                <svg class="w-4 h-4 text-teal-100/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                                                    <polyline points="20 6 9 17 4 12"></polyline>
-                                                                    <polyline points="22 10 13.5 18.5 11 16" class="opacity-80"></polyline>
-                                                                </svg>
+                                                                <span class="flex items-center">
+                                                                    <template x-if="activeContact && activeContact.is_online">
+                                                                        <!-- Delivered/Online: Double Grey Ticks -->
+                                                                        <svg class="w-4 h-4 text-teal-100/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                                                            <polyline points="22 10 13.5 18.5 11 16" class="opacity-80"></polyline>
+                                                                        </svg>
+                                                                    </template>
+                                                                    <template x-if="!activeContact || !activeContact.is_online">
+                                                                        <!-- Sent/Offline: Single Grey Tick -->
+                                                                        <svg class="w-4 h-4 text-teal-100/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                                                        </svg>
+                                                                    </template>
+                                                                </span>
                                                             </template>
                                                         </span>
                                                     </template>
