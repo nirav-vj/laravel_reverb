@@ -227,7 +227,10 @@
                             </div>
                         </div>
                         <template x-if="pinnedCount > 1">
-                            <div class="text-[10px] text-slate-400 font-medium px-2 py-1 bg-[#111b21] rounded-md shrink-0 border border-slate-800" x-text="pinnedCount + ' pinned'"></div>
+                            <div @click.stop="pinnedListModalOpen = true" 
+                                 class="text-[10px] text-teal-400 hover:text-teal-300 font-bold px-2 py-1 bg-slate-950 hover:bg-slate-900/60 border border-slate-800 rounded-md shrink-0 cursor-pointer transition select-none shadow-lg active:scale-95" 
+                                 title="View All Pinned"
+                                 x-text="pinnedCount + ' pinned'"></div>
                         </template>
                     </div>
                 </template>
@@ -557,7 +560,93 @@
                         </span>
                     </button>
                 </div>
-            </form>
+        </div>
+    </div>
+
+    <!-- All Pinned Messages Modal -->
+    <div x-show="pinnedListModalOpen" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" @click="pinnedListModalOpen = false" x-transition.opacity></div>
+        
+        <!-- Modal Content -->
+        <div class="relative bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 w-full max-w-md m-4 transform transition-all flex flex-col max-h-[80vh]"
+             x-transition:enter="ease-out duration-300"
+             x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+             x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+             x-transition:leave="ease-in duration-200"
+             x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+             x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95">
+             
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-teal-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"></path>
+                    </svg>
+                    <h3 class="text-lg font-bold text-slate-200">Pinned Messages</h3>
+                    <span class="px-2 py-0.5 text-xs font-semibold bg-teal-500/10 text-teal-400 rounded-full" x-text="pinnedCount"></span>
+                </div>
+                <button @click="pinnedListModalOpen = false" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- List Container -->
+            <div class="flex-1 overflow-y-auto space-y-3 pr-1">
+                <template x-for="msg in pinnedMessagesList" :key="msg.id">
+                    <div class="p-3 bg-slate-950/40 hover:bg-slate-950/80 border border-slate-800/80 rounded-xl transition duration-150 flex items-start justify-between gap-3 group/pin-item">
+                        <div class="min-w-0 flex-1 cursor-pointer" @click="scrollToMessage(msg.id); pinnedListModalOpen = false">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-xs font-bold text-teal-400" x-text="msg.sender_id === authUserId ? 'You' : activeContact.name"></span>
+                                <span class="text-[9px] text-slate-500 font-medium" x-text="formatTime(msg.created_at)"></span>
+                            </div>
+                            
+                            <!-- Attachment preview if present -->
+                            <template x-if="msg.attachment_path">
+                                <div class="mb-1 text-[11px] text-teal-400/80 flex items-center gap-1 font-semibold">
+                                    <span x-text="msg.attachment_type === 'image' ? '📷 Image' : '📁 Document'"></span>
+                                    <span class="text-slate-500 font-normal truncate max-w-[150px]" x-text="'(' + msg.attachment_name + ')'"></span>
+                                </div>
+                            </template>
+                            
+                            <p class="text-xs text-slate-300 line-clamp-2 leading-relaxed" x-text="msg.message || 'Attachment'"></p>
+                        </div>
+                        
+                        <div class="flex items-center gap-1.5 self-center">
+                            <!-- Scroll/Jump Button -->
+                            <button @click="scrollToMessage(msg.id); pinnedListModalOpen = false" 
+                                    class="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-teal-400 hover:bg-slate-700 transition"
+                                    title="Jump to Message">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path>
+                                </svg>
+                            </button>
+                            <!-- Unpin Button -->
+                            <button @click="pinMessageApi(msg.id)" 
+                                    class="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition"
+                                    title="Unpin Message">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </template>
+                
+                <template x-if="pinnedMessagesList.length === 0">
+                    <div class="text-center py-8 text-slate-500 text-xs">
+                        No pinned messages in this chat.
+                    </div>
+                </template>
+            </div>
+            
+            <div class="mt-4 pt-3 border-t border-slate-800 flex justify-end">
+                <button @click="pinnedListModalOpen = false" 
+                        class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition active:scale-95">
+                    Close
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -593,6 +682,7 @@
             profileAvatarFile: null,
             profileAvatarPreview: null,
             isSavingProfile: false,
+            pinnedListModalOpen: false,
             
             // Heartbeat Typing
             typingTimeout: null,
@@ -609,6 +699,11 @@
             get pinnedCount() {
                 if (!this.messages) return 0;
                 return this.messages.filter(m => m.is_pinned).length;
+            },
+
+            get pinnedMessagesList() {
+                if (!this.messages) return [];
+                return this.messages.filter(m => m.is_pinned);
             },
 
             scrollToMessage(id) {
