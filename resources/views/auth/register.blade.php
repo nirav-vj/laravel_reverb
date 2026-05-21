@@ -1,6 +1,5 @@
 @extends('layouts.app')
 
-@title('Create Account | ReverbChat')
 
 @section('content')
 <div class="min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8 relative overflow-hidden" x-data="registerForm()">
