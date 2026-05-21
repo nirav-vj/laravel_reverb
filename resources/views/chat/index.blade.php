@@ -1047,12 +1047,27 @@
                         if (data.success) {
                             const container = document.getElementById('message-container');
                             const isAtBottom = container ? (container.scrollHeight - container.scrollTop <= container.clientHeight + 100) : true;
-                            
-                            const hasNewMessages = data.messages.length > this.messages.length;
-                            
-                            this.messages = data.messages;
-                            
-                            if (isAtBottom && hasNewMessages) {
+
+                            // Smart merge: keep any optimistic (temp) messages that
+                            // haven't been confirmed by the server yet, so they don't flicker.
+                            const tempMessages = this.messages.filter(m => m._tempId);
+                            const serverIds = new Set(data.messages.map(m => m.id));
+
+                            // Start from server messages
+                            const merged = [...data.messages];
+
+                            // Append temp messages that the server hasn't confirmed yet
+                            tempMessages.forEach(tmp => {
+                                // Once server has an id matching its content, drop the temp
+                                if (!serverIds.has(tmp.id)) {
+                                    merged.push(tmp);
+                                }
+                            });
+
+                            const hadNewMessages = merged.length > this.messages.length;
+                            this.messages = merged;
+
+                            if (isAtBottom && hadNewMessages) {
                                 this.scrollToBottom();
                             }
                         }
@@ -1163,24 +1178,51 @@
 
                 const contactId = this.activeContact.id;
                 const formData = new FormData();
-                
-                if (this.newMessageText.trim()) {
-                    formData.append('message', this.newMessageText);
+
+                // Capture and clear input IMMEDIATELY so rapid Enter presses stay separate
+                const messageText = this.newMessageText.trim();
+                this.newMessageText = '';
+
+                if (messageText) {
+                    formData.append('message', messageText);
                 }
-                
+
                 if (this.attachmentFile) {
                     formData.append('attachment', this.attachmentFile);
                     this.isUploading = true;
                     this.attachmentProgress = 10;
                 }
 
-                // Stop typing notifications before sending
+                // ⚡ OPTIMISTIC UI — push message to screen in 0ms, no waiting for server
+                const tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+                const optimisticMsg = {
+                    _tempId: tempId,          // marker to identify this as a local temp message
+                    id: tempId,               // used by Alpine :key, replaced when server responds
+                    sender_id: this.authUserId,
+                    receiver_id: contactId,
+                    message: messageText,
+                    attachment_path: null,
+                    attachment_name: null,
+                    attachment_type: null,
+                    attachment_url: null,
+                    is_seen: false,
+                    is_pinned: false,
+                    is_deleted_for_everyone: false,
+                    deleted_by: [],
+                    reactions_data: [],
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                    _sending: true,           // show subtle sending indicator
+                };
+                this.messages.push(optimisticMsg);
+                this.updateContactLastMessage(contactId, optimisticMsg);
+                this.scrollToBottom();
+
+                // Stop typing notifications
                 this.whisperTyping(false);
 
-                // Fetch CSRF
                 const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-                // Send request using standard window.axios to track precise file upload percentages
                 window.axios.post(`/messages/${contactId}`, formData, {
                     headers: {
                         'Content-Type': 'multipart/form-data',
@@ -1188,30 +1230,36 @@
                     },
                     onUploadProgress: (progressEvent) => {
                         if (this.attachmentFile) {
-                            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-                            this.attachmentProgress = percentCompleted;
+                            const pct = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                            this.attachmentProgress = pct;
                         }
                     }
                 })
                 .then(response => {
                     if (response.data.success) {
                         const newMsg = response.data.message;
-                        
-                        // Push into conversation log
-                        this.messages.push(newMsg);
-                        
-                        // Update active contact last message snippet
+
+                        // Swap the optimistic placeholder with the real server message
+                        const idx = this.messages.findIndex(m => m._tempId === tempId);
+                        if (idx !== -1) {
+                            this.messages.splice(idx, 1, newMsg);
+                        } else {
+                            // Already replaced by polling — nothing to do
+                        }
+
                         this.updateContactLastMessage(contactId, newMsg);
-                        
-                        // Clear input elements
-                        this.newMessageText = '';
                         this.clearAttachment();
-                        this.scrollToBottom();
                     }
                 })
                 .catch(err => {
-                    console.error("Error sending message:", err);
-                    alert("Failed to send message/file. Verify file is valid (under 10MB).");
+                    console.error('Error sending message:', err);
+                    // Remove the optimistic message on failure
+                    this.messages = this.messages.filter(m => m._tempId !== tempId);
+                    // Restore text so user doesn't lose it
+                    if (!this.newMessageText.trim()) {
+                        this.newMessageText = messageText;
+                    }
+                    alert('Failed to send message. Please try again.');
                     this.isUploading = false;
                 });
             },
