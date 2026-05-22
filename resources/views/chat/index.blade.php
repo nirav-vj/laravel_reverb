@@ -256,7 +256,8 @@
 
                                     <!-- Message Bubble -->
                                     <div :id="'msg-' + msg.id" class="flex w-full transition-colors duration-500 rounded-lg" :class="msg.sender_id === authUserId ? 'justify-end' : 'justify-start'">
-                                        <div class="max-w-[75%] sm:max-w-[65%] rounded-2xl p-3 relative shadow-md group/bubble"
+                                        <div @dblclick="setReplyingTo(msg)"
+                                             class="max-w-[75%] sm:max-w-[65%] rounded-2xl p-3 relative shadow-md group/bubble cursor-pointer select-none"
                                              x-data="{ menuOpen: false, emojiPickerOpen: false }"
                                              :class="msg.sender_id === authUserId 
                                                 ? 'bg-gradient-to-br from-teal-600 to-teal-700 text-slate-100 rounded-tr-none' 
@@ -273,9 +274,28 @@
                                                 </div>
                                             </template>
 
-                                            <!-- Actions Row: Emoji Picker + 3-Dot Menu -->
-                                            <div class="absolute top-2 opacity-0 group-hover/bubble:opacity-100 transition-opacity duration-200 z-20 flex items-center gap-1"
-                                                 :class="msg.sender_id === authUserId ? '-left-20' : '-right-20'">
+                                            <!-- Nested Reply Quote Bubble -->
+                                            <template x-if="msg.parent">
+                                                <div @click.stop="scrollToMessage(msg.parent_id)"
+                                                     class="mb-2 p-2.5 rounded-xl border-l-4 cursor-pointer select-none transition duration-150 flex flex-col gap-0.5 text-left min-w-[140px]"
+                                                     :class="msg.sender_id === authUserId 
+                                                        ? 'bg-black/20 hover:bg-black/30 border-teal-300' 
+                                                        : 'bg-slate-950/60 hover:bg-slate-950/80 border-teal-500'">
+                                                    <span class="text-[10px] font-bold text-teal-400 leading-tight" 
+                                                          x-text="msg.parent.sender_id === authUserId ? 'You' : (msg.parent.sender ? msg.parent.sender.name : activeContact.name)"></span>
+                                                    
+                                                    <template x-if="msg.parent.attachment_path">
+                                                        <span class="text-[10px] text-teal-300/80 font-semibold truncate mt-0.5" 
+                                                              x-text="isImageAttachment(msg.parent) ? '📷 Image' : (isAudioAttachment(msg.parent) ? '🎤 Voice Note' : '📁 Document')"></span>
+                                                    </template>
+                                                    
+                                                    <p class="text-xs text-slate-300 line-clamp-1 leading-snug mt-0.5 break-words" x-text="msg.parent.message || 'Attachment'"></p>
+                                                </div>
+                                            </template>
+
+                                            <!-- Actions Row: Emoji Picker + Reply + 3-Dot Menu -->
+                                            <div class="absolute top-2 opacity-0 group-hover/bubble:opacity-100 transition-opacity duration-200 z-20 flex items-center gap-1.5"
+                                                 :class="msg.sender_id === authUserId ? '-left-[104px]' : '-right-[104px]'">
 
                                                 <!-- Emoji Reaction Trigger -->
                                                 <div class="relative"
@@ -365,6 +385,15 @@
 
                                                     </div>
                                                 </div>
+
+                                                <!-- Reply Button -->
+                                                <button @click.stop="setReplyingTo(msg)"
+                                                        class="p-1 rounded-full bg-slate-900/80 border border-slate-800 text-slate-400 hover:text-teal-400 shadow-lg backdrop-blur-sm transition"
+                                                        title="Reply">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path>
+                                                    </svg>
+                                                </button>
 
                                                 <!-- 3-Dot Options -->
                                                 <button @click.stop="menuOpen = !menuOpen" @click.away="menuOpen = false"
@@ -614,6 +643,32 @@
                                 </div>
                             </template>
                         </div>
+                    </div>
+
+                    <!-- Replying to Message Preview Banner -->
+                    <div x-show="replyingTo" class="px-4 py-3 bg-slate-900 border-t border-slate-800 flex items-center justify-between relative z-10 shrink-0" x-transition>
+                        <div class="flex items-center gap-3 overflow-hidden">
+                            <div class="text-teal-400 shrink-0">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path>
+                                </svg>
+                            </div>
+                            <div class="flex flex-col min-w-0 border-l-2 border-teal-500 pl-2 flex-1">
+                                <span class="text-[11px] font-bold text-teal-500 leading-tight" x-text="replyingTo && (replyingTo.sender_id === authUserId ? 'You' : activeContact.name)"></span>
+                                <template x-if="replyingTo && replyingTo.attachment_path">
+                                    <div class="text-[11px] text-teal-400/80 flex items-center gap-1 font-semibold">
+                                        <span x-text="isImageAttachment(replyingTo) ? '📷 Image' : (isAudioAttachment(replyingTo) ? '🎤 Voice Note' : '📁 Document')"></span>
+                                        <span class="text-slate-500 font-normal truncate max-w-[150px]" x-text="'(' + replyingTo.attachment_name + ')'"></span>
+                                    </div>
+                                </template>
+                                <p class="text-[13px] text-slate-300 truncate leading-tight mt-0.5" x-text="replyingTo && (replyingTo.message || 'Attachment')"></p>
+                            </div>
+                        </div>
+                        <button @click="clearReplyingTo()" class="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
                     </div>
 
                     <!-- Selected Attachment Banner -->
@@ -936,6 +991,7 @@
             messages: [],
             newMessageText: '',
             searchQuery: '',
+            replyingTo: null,
             
             // Attachments
             attachmentFile: null,
@@ -993,6 +1049,18 @@
                     el.classList.add('bg-teal-900/40');
                     setTimeout(() => el.classList.remove('bg-teal-900/40'), 1500);
                 }
+            },
+
+            setReplyingTo(msg) {
+                this.replyingTo = msg;
+                this.$nextTick(() => {
+                    const inputEl = document.querySelector('input[placeholder="Type a message..."]');
+                    if (inputEl) inputEl.focus();
+                });
+            },
+
+            clearReplyingTo() {
+                this.replyingTo = null;
             },
 
             init() {
@@ -1142,8 +1210,9 @@
             selectContact(contact) {
                 if (this.activeContact && this.activeContact.id === contact.id) return;
                 
-                // Clear any unsent attachment preview in new context
+                // Clear any unsent attachment preview and reply context
                 this.clearAttachment();
+                this.clearReplyingTo();
                 this.messages = [];
                 
                 // Set sidebar badge to 0 immediately for premium responsive feeling
@@ -1169,6 +1238,7 @@
 
             closeActiveChat() {
                 this.activeContact = null;
+                this.clearReplyingTo();
                 this.messages = [];
             },
 
@@ -1187,6 +1257,10 @@
                     formData.append('message', messageText);
                 }
 
+                if (this.replyingTo) {
+                    formData.append('parent_id', this.replyingTo.id);
+                }
+
                 if (this.attachmentFile) {
                     formData.append('attachment', this.attachmentFile);
                     this.isUploading = true;
@@ -1201,6 +1275,16 @@
                     sender_id: this.authUserId,
                     receiver_id: contactId,
                     message: messageText,
+                    parent_id: this.replyingTo ? this.replyingTo.id : null,
+                    parent: this.replyingTo ? {
+                        id: this.replyingTo.id,
+                        sender_id: this.replyingTo.sender_id,
+                        message: this.replyingTo.message,
+                        attachment_path: this.replyingTo.attachment_path,
+                        attachment_name: this.replyingTo.attachment_name,
+                        attachment_type: this.replyingTo.attachment_type,
+                        sender: this.replyingTo.sender || { name: this.replyingTo.sender_id === this.authUserId ? 'You' : this.activeContact.name }
+                    } : null,
                     attachment_path: null,
                     attachment_name: null,
                     attachment_type: null,
@@ -1217,6 +1301,9 @@
                 this.messages.push(optimisticMsg);
                 this.updateContactLastMessage(contactId, optimisticMsg);
                 this.scrollToBottom();
+
+                // Clear replying status
+                this.clearReplyingTo();
 
                 // Stop typing notifications
                 this.whisperTyping(false);
@@ -1594,6 +1681,13 @@
                 const filename = 'voice_note_' + Date.now() + '.webm';
                 formData.append('attachment', blob, filename);
                 formData.append('message', '');
+
+                if (this.replyingTo) {
+                    formData.append('parent_id', this.replyingTo.id);
+                }
+
+                // Clear replying status
+                this.clearReplyingTo();
 
                 const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
                 this.isUploading = true;

@@ -13,6 +13,7 @@ class Message extends Model
         'sender_id', 
         'receiver_id', 
         'message', 
+        'parent_id',
         'attachment_path', 
         'attachment_name', 
         'attachment_type', 
@@ -33,7 +34,15 @@ class Message extends Model
 
     protected $appends = ['attachment_url', 'reactions_data'];
 
-    protected $with = ['reactions.user'];
+    protected $with = ['reactions.user', 'parent', 'sender'];
+
+    /**
+     * Get the parent message that this message is replying to.
+     */
+    public function parent()
+    {
+        return $this->belongsTo(Message::class, 'parent_id');
+    }
 
     /**
      * Get the sender of the message.

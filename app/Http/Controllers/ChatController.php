@@ -123,6 +123,7 @@ class ChatController extends Controller
     {
         $request->validate([
             'message' => 'nullable|string',
+            'parent_id' => 'nullable|exists:messages,id',
             'attachment' => 'nullable|file|max:10240', // Max 10MB
         ]);
 
@@ -162,6 +163,7 @@ class ChatController extends Controller
             'sender_id' => $currentUser->id,
             'receiver_id' => $user->id,
             'message' => $request->message,
+            'parent_id' => $request->parent_id,
             'attachment_path' => $attachmentPath,
             'attachment_name' => $attachmentName,
             'attachment_type' => $attachmentType,
@@ -169,17 +171,17 @@ class ChatController extends Controller
         ]);
 
         /*
-        // Broadcast to receiver (wrapped in try-catch to prevent crashes if Reverb is offline)
-        try {
-            broadcast(new MessageSent($message))->toOthers();
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Reverb Broadcast Failed: ' . $e->getMessage());
-        }
+         // Broadcast to receiver (wrapped in try-catch to prevent crashes if Reverb is offline)
+         try {
+             broadcast(new MessageSent($message))->toOthers();
+         } catch (\Exception $e) {
+             \Illuminate\Support\Facades\Log::error('Reverb Broadcast Failed: ' . $e->getMessage());
+         }
         */
 
         return response()->json([
             'success' => true,
-            'message' => $message->load('sender'),
+            'message' => $message->load(['sender', 'parent.sender']),
         ]);
     }
 
