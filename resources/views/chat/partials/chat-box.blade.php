@@ -3,27 +3,41 @@
     
     <!-- Chat Header -->
     <div class="h-16 px-4 border-b border-slate-800/80 bg-slate-900/40 flex items-center justify-between flex-shrink-0">
-        <div class="flex items-center gap-3 min-w-0">
+        <div @click="if(activeContact.is_group) groupInfoSidebarOpen = !groupInfoSidebarOpen" class="flex items-center gap-3 min-w-0 cursor-pointer group/header">
             <!-- Back Button (Mobile) -->
-            <button @click="closeActiveChat()" class="md:hidden p-2 -ml-2 rounded-xl text-slate-400 hover:text-white transition duration-150">
+            <button @click.stop="closeActiveChat()" class="md:hidden p-2 -ml-2 rounded-xl text-slate-400 hover:text-white transition duration-150">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                 </svg>
             </button>
 
-            <img :src="activeContact.avatar_url" class="w-10 h-10 rounded-full object-cover border border-slate-800">
+            <img :src="activeContact.avatar_url" class="w-10 h-10 rounded-full object-cover border border-slate-800 group-hover/header:scale-105 transition duration-200">
             <div class="min-w-0">
-                <h3 class="font-semibold text-sm leading-tight truncate text-slate-200" x-text="activeContact.name"></h3>
+                <h3 class="font-semibold text-sm leading-tight truncate text-slate-200 group-hover/header:text-teal-400 transition duration-150" x-text="activeContact.name"></h3>
                 <div class="text-[10px] leading-none mt-1">
                     <template x-if="activeContact.typing">
-                        <span class="text-teal-400 font-medium italic animate-pulse">typing...</span>
+                        <span class="text-teal-400 font-medium italic animate-pulse" x-text="activeContact.typing === true ? 'typing...' : activeContact.typing"></span>
                     </template>
                     <template x-if="!activeContact.typing">
-                        <span :class="activeContact.is_online ? 'text-teal-400 font-medium' : 'text-slate-500'" 
-                              x-text="activeContact.is_online ? 'Online' : 'Offline'"></span>
+                        <span :class="activeContact.is_group ? 'text-teal-400/80 font-medium' : (activeContact.is_online ? 'text-teal-400 font-medium' : 'text-slate-500')" 
+                              x-text="activeContact.is_group ? (activeContact.members ? activeContact.members.length + ' members • Click for info' : 'Group • Click for info') : (activeContact.is_online ? 'Online' : 'Offline')"></span>
                     </template>
                 </div>
             </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <!-- Info Button -->
+            <template x-if="activeContact.is_group">
+                <button @click="groupInfoSidebarOpen = !groupInfoSidebarOpen" 
+                        class="p-2 rounded-xl text-slate-400 hover:text-teal-400 hover:bg-teal-500/10 transition duration-150" 
+                        :class="groupInfoSidebarOpen ? 'text-teal-400 bg-teal-500/10' : ''"
+                        title="Group Info">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </button>
+            </template>
         </div>
     </div>
 
@@ -79,6 +93,12 @@
                                 ? 'bg-gradient-to-br from-teal-600 to-teal-700 text-slate-100 rounded-tr-none' 
                                 : 'bg-slate-900/80 border border-slate-800 text-slate-200 rounded-tl-none'">
                             
+                            <!-- Sender Name (Only in Group Chats for other members) -->
+                            <template x-if="activeContact.is_group && msg.sender_id !== authUserId && msg.sender">
+                                <div class="text-[11px] font-bold text-teal-400 mb-1 leading-none hover:underline"
+                                     x-text="msg.sender.name"></div>
+                            </template>
+
                             <!-- Pinned Indicator -->
                             <template x-if="msg.is_pinned">
                                 <div class="flex items-center gap-1 mb-1.5 text-[10px] uppercase tracking-wider font-bold"

@@ -34,6 +34,7 @@ class User extends Authenticatable
      */
     protected $appends = [
         'avatar_url',
+        'is_group',
     ];
 
     /**
@@ -52,6 +53,16 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the groups this user is a member of.
+     */
+    public function groups()
+    {
+        return $this->belongsToMany(Group::class, 'group_members')
+                    ->withPivot('role', 'joined_at', 'last_read_at')
+                    ->withTimestamps();
+    }
+
+    /**
      * Get the messages sent by this user.
      */
     public function sentMessages()
@@ -65,6 +76,14 @@ class User extends Authenticatable
     public function receivedMessages()
     {
         return $this->hasMany(Message::class, 'receiver_id');
+    }
+
+    /**
+     * Appended attribute to determine if this item is a group.
+     */
+    public function getIsGroupAttribute(): bool
+    {
+        return false;
     }
 
     /**

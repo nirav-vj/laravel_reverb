@@ -12,6 +12,7 @@ class Message extends Model
     protected $fillable = [
         'sender_id', 
         'receiver_id', 
+        'group_id', 
         'message', 
         'parent_id',
         'attachment_path', 
@@ -58,6 +59,14 @@ class Message extends Model
     public function receiver()
     {
         return $this->belongsTo(User::class, 'receiver_id');
+    }
+
+    /**
+     * Get the group context of the message.
+     */
+    public function group()
+    {
+        return $this->belongsTo(Group::class, 'group_id');
     }
 
     /**

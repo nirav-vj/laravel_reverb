@@ -10,6 +10,7 @@ function chatApp(config) {
         messages: [],
         newMessageText: '',
         searchQuery: '',
+        activeTab: 'chats', // 'chats' or 'groups'
         replyingTo: null,
         
         // Attachments
@@ -37,6 +38,19 @@ function chatApp(config) {
         profileAvatarPreview: null,
         isSavingProfile: false,
         pinnedListModalOpen: false,
+        
+        // Group Creation State
+        createGroupModalOpen: false,
+        groupInfoSidebarOpen: false,
+        showAddMembersForm: false,
+        addMemberSelection: [],
+        isAddingMembers: false,
+        newGroupName: '',
+        newGroupDescription: '',
+        newGroupMembers: [],
+        newGroupAvatarFile: null,
+        newGroupAvatarPreview: null,
+        isCreatingGroup: false,
         
         // Heartbeat Typing
         typingTimeout: null,
@@ -101,19 +115,58 @@ function chatApp(config) {
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
+                        // A. Check for REMOVALS: Groups in this.users that are NOT in data.users response
+                        this.users.forEach((existingUser) => {
+                            if (existingUser.is_group) {
+                                const stillExists = data.users.some(u => u.id === existingUser.id && u.is_group);
+                                if (!stillExists) {
+                                    // Current user was removed from this group!
+                                    // Remove it from the list
+                                    this.users = this.users.filter(u => !(u.id === existingUser.id && u.is_group));
+                                    
+                                    // If this group was the active chat, close it!
+                                    if (this.activeContact && this.activeContact.id === existingUser.id && this.activeContact.is_group) {
+                                        this.closeActiveChat();
+                                        alert(`You have been removed from the group "${existingUser.name}".`);
+                                    }
+                                }
+                            }
+                        });
+
+                        // B. Check for ADDITIONS: Contacts/Groups in data.users that are NOT in this.users yet
                         data.users.forEach(updatedUser => {
-                            const user = this.users.find(u => u.id === updatedUser.id);
+                            const exists = this.users.some(u => u.id === updatedUser.id && !!u.is_group === !!updatedUser.is_group);
+                            if (!exists) {
+                                // Create new contact entry
+                                const newContact = {
+                                    id: updatedUser.id,
+                                    name: updatedUser.name,
+                                    avatar_url: updatedUser.avatar_url,
+                                    description: updatedUser.description || null,
+                                    is_group: updatedUser.is_group,
+                                    unread_count: updatedUser.unread_count,
+                                    is_online: updatedUser.is_online,
+                                    typing: updatedUser.is_typing,
+                                    last_message: updatedUser.last_message
+                                };
+                                this.users.unshift(newContact);
+                            }
+                        });
+
+                        // C. Update existing contacts' status
+                        data.users.forEach(updatedUser => {
+                            const user = this.users.find(u => u.id === updatedUser.id && !!u.is_group === !!updatedUser.is_group);
                             if (user) {
                                 user.unread_count = updatedUser.unread_count;
                                 user.is_online = updatedUser.is_online;
                                 user.typing = updatedUser.is_typing;
                                 
-                                if (this.activeContact && this.activeContact.id === user.id) {
+                                if (this.activeContact && this.activeContact.id === user.id && !!this.activeContact.is_group === !!user.is_group) {
                                     this.activeContact.typing = updatedUser.is_typing;
                                 }
 
                                 if (updatedUser.last_message) {
-                                    this.updateContactLastMessage(user.id, updatedUser.last_message);
+                                    this.updateContactLastMessage(user.id, updatedUser.last_message, !!user.is_group);
                                 }
                             }
                         });
@@ -128,7 +181,10 @@ function chatApp(config) {
         },
 
         pollActiveChat() {
-            fetch(`/messages/${this.activeContact.id}`)
+            const url = this.activeContact.is_group 
+                ? `/messages/group/${this.activeContact.id}` 
+                : `/messages/${this.activeContact.id}`;
+            fetch(url)
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
@@ -218,16 +274,31 @@ function chatApp(config) {
 
         // Filter users list based on sidebar search input
         get filteredUsers() {
+            let list = this.users;
+            if (this.activeTab === 'chats') {
+                list = list.filter(u => !u.is_group);
+            } else if (this.activeTab === 'groups') {
+                list = list.filter(u => u.is_group);
+            }
+
             if (!this.searchQuery.trim()) {
-                return this.users;
+                return list;
             }
             const query = this.searchQuery.toLowerCase();
-            return this.users.filter(u => u.name.toLowerCase().includes(query));
+            return list.filter(u => u.name.toLowerCase().includes(query));
+        },
+
+        get totalChatsUnread() {
+            return this.users.filter(u => !u.is_group).reduce((sum, u) => sum + (u.unread_count || 0), 0);
+        },
+
+        get totalGroupsUnread() {
+            return this.users.filter(u => u.is_group).reduce((sum, u) => sum + (u.unread_count || 0), 0);
         },
 
         // Select and open contact messaging thread
         selectContact(contact) {
-            if (this.activeContact && this.activeContact.id === contact.id) return;
+            if (this.activeContact && this.activeContact.id === contact.id && !!this.activeContact.is_group === !!contact.is_group) return;
             
             // Clear any unsent attachment preview and reply context
             this.clearAttachment();
@@ -239,15 +310,21 @@ function chatApp(config) {
             this.activeContact = contact;
 
             // Load messages from endpoint
-            fetch(`/messages/${contact.id}`)
+            const url = contact.is_group ? `/messages/group/${contact.id}` : `/messages/${contact.id}`;
+            fetch(url)
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
                         this.messages = data.messages;
                         
                         // Merge contact status details from endpoint
-                        this.activeContact.is_online = data.contact.is_online;
-                        this.activeContact.last_seen = data.contact.last_seen;
+                        if (contact.is_group) {
+                            this.activeContact.description = data.contact.description;
+                            this.activeContact.members = data.contact.members;
+                        } else {
+                            this.activeContact.is_online = data.contact.is_online;
+                            this.activeContact.last_seen = data.contact.last_seen;
+                        }
                         
                         this.scrollToBottom();
                     }
@@ -266,6 +343,7 @@ function chatApp(config) {
             if (!this.newMessageText.trim() && !this.attachmentFile) return;
 
             const contactId = this.activeContact.id;
+            const isGroup = !!this.activeContact.is_group;
             const formData = new FormData();
 
             // Capture and clear input IMMEDIATELY so rapid Enter presses stay separate
@@ -292,7 +370,8 @@ function chatApp(config) {
                 _tempId: tempId,          // marker to identify this as a local temp message
                 id: tempId,               // used by Alpine :key, replaced when server responds
                 sender_id: this.authUserId,
-                receiver_id: contactId,
+                receiver_id: isGroup ? null : contactId,
+                group_id: isGroup ? contactId : null,
                 message: messageText,
                 parent_id: this.replyingTo ? this.replyingTo.id : null,
                 parent: this.replyingTo ? {
@@ -318,7 +397,7 @@ function chatApp(config) {
                 _sending: true,           // show subtle sending indicator
             };
             this.messages.push(optimisticMsg);
-            this.updateContactLastMessage(contactId, optimisticMsg);
+            this.updateContactLastMessage(contactId, optimisticMsg, isGroup);
             this.scrollToBottom();
 
             // Clear replying status
@@ -329,7 +408,9 @@ function chatApp(config) {
 
             const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-            window.axios.post(`/messages/${contactId}`, formData, {
+            const postUrl = isGroup ? `/messages/group/${contactId}` : `/messages/${contactId}`;
+
+            window.axios.post(postUrl, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                     'X-CSRF-TOKEN': csrfToken
@@ -353,7 +434,7 @@ function chatApp(config) {
                         // Already replaced by polling — nothing to do
                     }
 
-                    this.updateContactLastMessage(contactId, newMsg);
+                    this.updateContactLastMessage(contactId, newMsg, isGroup);
                     this.clearAttachment();
                 }
             })
@@ -413,7 +494,10 @@ function chatApp(config) {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': csrfToken
                     },
-                    body: JSON.stringify({ receiver_id: this.activeContact.id })
+                    body: JSON.stringify({ 
+                        receiver_id: this.activeContact.id,
+                        is_group: !!this.activeContact.is_group 
+                    })
                 }).catch(err => {});
             }
         },
@@ -482,8 +566,8 @@ function chatApp(config) {
             }
         },
 
-        updateContactLastMessage(userId, message) {
-            const userIndex = this.users.findIndex(u => u.id === userId);
+        updateContactLastMessage(userId, message, isGroup = false) {
+            const userIndex = this.users.findIndex(u => u.id === userId && !!u.is_group === !!isGroup);
             if (userIndex !== -1) {
                 // Update user's message object reference
                 this.users[userIndex].last_message = message;
@@ -570,12 +654,17 @@ function chatApp(config) {
 
         formatSnippet(msg) {
             if (!msg) return 'No messages yet';
-            if (msg.attachment_path) {
-                if (this.isImageAttachment(msg)) return '📷 Image';
-                if (this.isAudioAttachment(msg)) return '🎤 Voice Note';
-                return '📁 Document';
+            let prefix = '';
+            if (msg.group_id) {
+                const senderName = msg.sender ? (msg.sender_id === this.authUserId ? 'You' : msg.sender.name) : 'System';
+                prefix = senderName + ': ';
             }
-            return msg.message || '';
+            if (msg.attachment_path) {
+                if (this.isImageAttachment(msg)) return prefix + '📷 Image';
+                if (this.isAudioAttachment(msg)) return prefix + '🎤 Voice Note';
+                return prefix + '📁 Document';
+            }
+            return prefix + (msg.message || '');
         },
 
         openProfileModal() {
@@ -792,6 +881,183 @@ function chatApp(config) {
                 }
             });
             return Object.values(groups);
+        },
+
+        handleNewGroupAvatarChange(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            this.newGroupAvatarFile = file;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                this.newGroupAvatarPreview = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        },
+
+        toggleGroupMemberSelection(userId) {
+            if (this.newGroupMembers.includes(userId)) {
+                this.newGroupMembers = this.newGroupMembers.filter(id => id !== userId);
+            } else {
+                this.newGroupMembers.push(userId);
+            }
+        },
+
+        submitCreateGroup() {
+            if (!this.newGroupName.trim()) {
+                alert('Please enter a group name.');
+                return;
+            }
+            if (this.newGroupMembers.length === 0) {
+                alert('Please select at least one contact to join the group.');
+                return;
+            }
+
+            this.isCreatingGroup = true;
+            const formData = new FormData();
+            formData.append('name', this.newGroupName.trim());
+            formData.append('description', this.newGroupDescription.trim());
+            
+            this.newGroupMembers.forEach(userId => {
+                formData.append('members[]', userId);
+            });
+
+            if (this.newGroupAvatarFile) {
+                formData.append('avatar', this.newGroupAvatarFile);
+            }
+
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+            window.axios.post('/groups', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    'X-CSRF-TOKEN': csrfToken
+                }
+            })
+            .then(res => {
+                this.isCreatingGroup = false;
+                if (res.data.success) {
+                    const newGroup = res.data.group;
+                    // Add to contacts list
+                    this.users.unshift(newGroup);
+                    // Select it
+                    this.selectContact(newGroup);
+                    // Reset form & state
+                    this.newGroupName = '';
+                    this.newGroupDescription = '';
+                    this.newGroupMembers = [];
+                    this.newGroupAvatarFile = null;
+                    this.newGroupAvatarPreview = null;
+                    this.createGroupModalOpen = false;
+                } else {
+                    alert(res.data.error || 'Failed to create group.');
+                }
+            })
+            .catch(err => {
+                this.isCreatingGroup = false;
+                console.error(err);
+                alert('Failed to create group. Make sure files are under 2MB.');
+            });
+        },
+
+        selectGroupMember(member) {
+            if (member.id === this.authUserId) return; // Cannot direct chat with yourself!
+
+            const contact = this.users.find(u => u.id === member.id && !u.is_group);
+            if (contact) {
+                this.selectContact(contact);
+            } else {
+                // Construct a dynamic temporary contact so the chat screen loads immediately
+                const dynamicContact = {
+                    id: member.id,
+                    name: member.name,
+                    avatar_url: member.avatar_url,
+                    is_group: false,
+                    unread_count: 0,
+                    is_online: member.is_online,
+                    last_seen: null
+                };
+                this.selectContact(dynamicContact);
+            }
+            this.activeTab = 'chats';
+            this.groupInfoSidebarOpen = false;
+        },
+
+        toggleAddMemberSelection(userId) {
+            if (this.addMemberSelection.includes(userId)) {
+                this.addMemberSelection = this.addMemberSelection.filter(id => id !== userId);
+            } else {
+                this.addMemberSelection.push(userId);
+            }
+        },
+
+        submitAddMembers() {
+            if (this.addMemberSelection.length === 0) return;
+            this.isAddingMembers = true;
+
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            window.axios.post(`/groups/${this.activeContact.id}/members`, {
+                user_ids: this.addMemberSelection
+            }, {
+                headers: { 'X-CSRF-TOKEN': csrfToken }
+            })
+            .then(res => {
+                this.isAddingMembers = false;
+                if (res.data.success) {
+                    this.activeContact.members = res.data.members;
+                    this.addMemberSelection = [];
+                    this.showAddMembersForm = false;
+                } else {
+                    alert(res.data.error || 'Failed to add members.');
+                }
+            })
+            .catch(err => {
+                this.isAddingMembers = false;
+                console.error(err);
+                alert('Error adding group members.');
+            });
+        },
+
+        removeMember(member) {
+            if (!confirm(`Are you sure you want to remove ${member.name} from the group?`)) return;
+
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            window.axios.delete(`/groups/${this.activeContact.id}/members/${member.id}`, {
+                headers: { 'X-CSRF-TOKEN': csrfToken }
+            })
+            .then(res => {
+                if (res.data.success) {
+                    this.activeContact.members = res.data.members;
+                } else {
+                    alert(res.data.error || 'Failed to remove member.');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Error removing group member.');
+            });
+        },
+
+        makeAdmin(member) {
+            if (!confirm(`Are you sure you want to make ${member.name} a Group Admin?`)) return;
+
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            window.axios.put(`/groups/${this.activeContact.id}/members/${member.id}/role`, {
+                role: 'admin'
+            }, {
+                headers: { 'X-CSRF-TOKEN': csrfToken }
+            })
+            .then(res => {
+                if (res.data.success) {
+                    this.activeContact.members = res.data.members;
+                } else {
+                    alert(res.data.error || 'Failed to make admin.');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Error updating group member role.');
+            });
         }
     };
 }

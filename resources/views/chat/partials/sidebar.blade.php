@@ -21,6 +21,13 @@
         </div>
         
         <div class="flex items-center gap-2">
+            <!-- New Group Button -->
+            <button @click="createGroupModalOpen = true" type="button" class="p-2 rounded-xl text-slate-400 hover:text-teal-400 hover:bg-teal-500/10 transition duration-150" title="Create New Group">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                </svg>
+            </button>
+            
             <!-- Logout Button -->
             <form action="{{ route('logout') }}" method="POST" class="inline">
                 @csrf
@@ -47,19 +54,65 @@
         </div>
     </div>
 
+    <!-- Tabs: Chats & Groups -->
+    <div class="flex border-b border-slate-800/80 bg-slate-900/10 shrink-0">
+        <!-- Chats Tab -->
+        <button @click="activeTab = 'chats'" 
+                class="flex-1 py-3 text-center text-xs font-semibold relative transition-all duration-200 flex items-center justify-center gap-2 group/tab"
+                :class="activeTab === 'chats' ? 'text-teal-400 font-bold' : 'text-slate-400 hover:text-slate-200'">
+            <span>Chats</span>
+            
+            <!-- Unread Badge -->
+            <span x-show="totalChatsUnread > 0" 
+                  x-text="totalChatsUnread"
+                  class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-gradient-to-r from-teal-500 to-emerald-500 text-[10px] font-black text-slate-950 min-w-[18px]">
+            </span>
+
+            <!-- Glowing Active Underline -->
+            <div class="absolute bottom-0 inset-x-4 h-[3px] rounded-t-full transition-all duration-300"
+                 :class="activeTab === 'chats' ? 'bg-gradient-to-r from-teal-400 to-emerald-400 shadow-[0_-2px_10px_rgba(45,212,191,0.4)]' : 'bg-transparent group-hover/tab:bg-slate-700/50'"></div>
+        </button>
+
+        <!-- Groups Tab -->
+        <button @click="activeTab = 'groups'" 
+                class="flex-1 py-3 text-center text-xs font-semibold relative transition-all duration-200 flex items-center justify-center gap-2 group/tab"
+                :class="activeTab === 'groups' ? 'text-teal-400 font-bold' : 'text-slate-400 hover:text-slate-200'">
+            <span>Groups</span>
+
+            <!-- Unread Badge -->
+            <span x-show="totalGroupsUnread > 0" 
+                  x-text="totalGroupsUnread"
+                  class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-gradient-to-r from-teal-500 to-emerald-500 text-[10px] font-black text-slate-950 min-w-[18px]">
+            </span>
+
+            <!-- Glowing Active Underline -->
+            <div class="absolute bottom-0 inset-x-4 h-[3px] rounded-t-full transition-all duration-300"
+                 :class="activeTab === 'groups' ? 'bg-gradient-to-r from-teal-400 to-emerald-400 shadow-[0_-2px_10px_rgba(45,212,191,0.4)]' : 'bg-transparent group-hover/tab:bg-slate-700/50'"></div>
+        </button>
+    </div>
+
     <!-- Contacts List -->
     <div class="flex-1 overflow-y-auto divide-y divide-slate-800/30">
-        <template x-for="user in filteredUsers" :key="user.id">
+        <template x-for="user in filteredUsers" :key="user.is_group ? 'g_' + user.id : 'u_' + user.id">
             <div @click="selectContact(user)" 
                  class="px-4 py-3 flex items-center gap-3 hover:bg-slate-900/40 cursor-pointer transition-colors duration-150 relative group"
-                 :class="activeContact && activeContact.id === user.id ? 'bg-slate-900/60 border-l-4 border-teal-500' : 'border-l-4 border-transparent'">
+                 :class="activeContact && activeContact.id === user.id && !!activeContact.is_group === !!user.is_group ? 'bg-slate-900/60 border-l-4 border-teal-500' : 'border-l-4 border-transparent'">
                 
                 <!-- Contact Avatar with Real-time Online Indicator -->
                 <div class="relative flex-shrink-0">
                     <img :src="user.avatar_url" class="w-12 h-12 rounded-full object-cover border-2 border-slate-800"
-                         :class="user.is_online ? 'border-teal-500' : 'border-slate-800'">
-                    <span x-show="user.is_online" 
-                          class="absolute bottom-0 right-0 block h-3.5 w-3.5 rounded-full bg-teal-400 border-2 border-slate-950 shadow-[0_0_10px_rgba(45,212,191,0.5)]"></span>
+                         :class="user.is_group ? 'border-teal-500/40' : (user.is_online ? 'border-teal-500' : 'border-slate-800')">
+                    <template x-if="!user.is_group">
+                        <span x-show="user.is_online" 
+                              class="absolute bottom-0 right-0 block h-3.5 w-3.5 rounded-full bg-teal-400 border-2 border-slate-950 shadow-[0_0_10px_rgba(45,212,191,0.5)]"></span>
+                    </template>
+                    <template x-if="user.is_group">
+                        <span class="absolute bottom-0 right-0 block h-4.5 w-4.5 rounded-full bg-teal-500 text-slate-950 flex items-center justify-center border border-slate-950 p-[2.5px] shadow-[0_0_8px_rgba(45,212,191,0.4)]">
+                            <svg class="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                            </svg>
+                        </span>
+                    </template>
                 </div>
 
                 <!-- Info details -->
